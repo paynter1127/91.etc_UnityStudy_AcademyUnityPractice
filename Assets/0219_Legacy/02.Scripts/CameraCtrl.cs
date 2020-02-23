@@ -30,7 +30,7 @@ public class CameraCtrl : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //Vector3 originPosition = tr.position;
+        //카메라 포지션
         Vector3 originPosition = CachedTransform.position;
 
 
