@@ -6,7 +6,6 @@ public class GunCtrl : MonoBehaviour
 {
     public GameObject prefDamageEffect;
 
-    Transform mTransform = null;
     Transform firePos;
 
     public float damage = 25f;

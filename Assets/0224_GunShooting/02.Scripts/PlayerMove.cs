@@ -7,7 +7,6 @@ using UnityEngine;
 
 public class PlayerMove : MonoBehaviour
 {
-
     Transform mTransform = null;
     Transform cachedTransform
     {
@@ -22,13 +21,16 @@ public class PlayerMove : MonoBehaviour
     public GameObject gun;
 
     float moveSpeed = 0f;
+    //float turn = 0;
+    //float turnSpeed = 0f;
 
     // Start is called before the first frame update
     void Start()
     {
-        mTransform = cachedTransform;
+        //mTransform = cachedTransform;
 
         moveSpeed = 8f;
+        //turnSpeed = 180f;
         rb = GetComponent<Rigidbody>();
     }
 
@@ -50,16 +52,39 @@ public class PlayerMove : MonoBehaviour
         float xSpeed = xInput * moveSpeed;
         float zSpeed = zInput * moveSpeed;
 
-        rb.velocity = new Vector3(xSpeed, 0f, zSpeed);
+        //위치 이동
+        //rb.velocity = new Vector3(xSpeed, 0f, zSpeed);
+        //rb.velocity = new Vector3(xSpeed, 0f, zSpeed);//절대 좌표인데, 이걸 상대 좌표로 변경을 못하겠다.
 
-       // if(Input.GetKey(KeyCode.LeftArrow))
-       // {
-       //
-       // }
-       // else if(Input.GetKey(KeyCode.RightArrow))
-       // {
-       //
-       // }
+        Vector3 aa = new Vector3(xSpeed, 0f, zSpeed);
         
+
+
+        //트렌스폼 처리는 easy
+        //transform.position += transform.forward * zSpeed * Time.deltaTime;
+        //transform.position += transform.right * xSpeed * Time.deltaTime;
+
+
+        //회전 처리 할 땐 트렌스폼에서 처리 해라(예외상황이 적다)
+
+        //회전 처리
+        if (Input.GetKey(KeyCode.Q))//좌회전
+        {
+            //rb.AddTorque(Vector3.up);
+            //rb.AddTorque(new Vector3(0f, -10f, 0f));
+            //turn -= turnSpeed * Time.deltaTime;
+
+            transform.Rotate(0f, -30f * Time.deltaTime, 0f);
+        }
+        else if (Input.GetKey(KeyCode.E))
+        {
+            //rb.AddTorque(new Vector3(0f, 10f, 0f));
+            //turn += turnSpeed * Time.deltaTime;
+            transform.Rotate(0f, 30f * Time.deltaTime, 0f);
+        }
+        //rb.rotation = Quaternion.Euler(0f, turn, 0f);
+
     }
+
+
 }
