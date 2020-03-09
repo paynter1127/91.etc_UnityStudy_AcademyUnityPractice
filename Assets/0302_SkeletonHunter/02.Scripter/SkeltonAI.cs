@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -20,11 +21,15 @@ using UnityEngine;
 
 public enum EnemyState : int
 {
-    Idle, Walk, Run, Attack, Death
+    Idle, Walk, Run, Attack, Death, Hide
 }
 
 public class SkeltonAI : MonoBehaviour
 {
+    Camera eye;//에너미 시야
+    public GameObject target;
+    bool isFindE = false;
+
     EnemyState state;
     EnemyState nextState;
 
@@ -33,14 +38,16 @@ public class SkeltonAI : MonoBehaviour
     public float rotationSpeed = 20f;
 
     Animator anim;
-    Transform tr;
+
+    
 
     // Start is called before the first frame update
     void Start()
     {
+
         state = EnemyState.Idle;
         anim = GetComponent<Animator>();
-        tr = GetComponent<Transform>();
+        eye = transform.GetComponentInChildren<Camera>();
 
         StartCoroutine(CoroutineIdle());
         //StartCoroutine("CoroutinIdle"); //스트링으로 호출
@@ -69,9 +76,12 @@ public class SkeltonAI : MonoBehaviour
             case EnemyState.Run: UpdateRun(); break;
             case EnemyState.Attack: UpdateAttack(); break;
             case EnemyState.Death: UpdateDeath(); break;
+            case EnemyState.Hide: UpdateHide(); break;
         }
 
     }
+
+    
 
 
     // idle 상태에서 2초 동안 대기
@@ -80,27 +90,38 @@ public class SkeltonAI : MonoBehaviour
     void UpdateIdle()
     {
         //매 프레임 해야하는 실행문
+        if(IsFindEnemy())
+        {
+            ChangeState(EnemyState.Run);
+            return;
+        }
     }
 
     void UpdateWalk()
     {
         //if(state != EnemyState.Walk) ChangeState(EnemyState.Walk);
 
+        if (IsFindEnemy())
+        {
+            ChangeState(EnemyState.Run);
+            return;
+        }
+
         //타겟 방향
-        Vector3 dir = targetPos - tr.position;
+        Vector3 dir = targetPos - transform.position;
         //dir.Normalize();
 
         //도착 여부 판별
-        if (Vector3.Distance(targetPos, tr.position) < 0.2f)
+        if (Vector3.Distance(targetPos, transform.position) < 0.2f)
         {
             ChangeState(EnemyState.Idle);
             return;
         }
 
         var targetRotation = Quaternion.LookRotation(dir, Vector3.up);
-        tr.rotation = Quaternion.Slerp(tr.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
 
-        tr.position += tr.forward * moveSpeed * Time.deltaTime;
+        transform.position += transform.forward * moveSpeed * Time.deltaTime;
         //tr.position += new Vector3(1 * Time.deltaTime, 0, 0);
 
     }
@@ -120,6 +141,12 @@ public class SkeltonAI : MonoBehaviour
 
     }
 
+    private void UpdateHide()
+    {
+
+    }
+
+
     void ChangeState(EnemyState _state)
     {
         state = _state;
@@ -138,15 +165,18 @@ public class SkeltonAI : MonoBehaviour
             case EnemyState.Run: StartCoroutine(CoroutineRun()); break;
             case EnemyState.Attack: StartCoroutine(CoroutineAttack()); break;
             case EnemyState.Death: StartCoroutine(CoroutineDeath()); break;
+            case EnemyState.Hide: StartCoroutine(CoroutineHide()); break;
         }
     }
+
+    
 
     IEnumerator CoroutineIdle()
     {
         //스테이트가 바뀔 때 한번만 실행되는 동작
         anim.SetBool("isIdle", true);
 
-        int randState = Random.Range(1, 2);
+        int randState = UnityEngine.Random.Range(1, 2);
         switch(randState)
         {
             case 0: nextState = EnemyState.Idle; break;
@@ -183,7 +213,7 @@ public class SkeltonAI : MonoBehaviour
         //스테이트가 바뀔 때 한번만 실행되는 동작
         anim.SetBool("isWalk", true);
 
-        targetPos = tr.position + new Vector3(Random.Range(-4f, 4f), 0f, Random.Range(-4f, 4f));
+        targetPos = transform.position + new Vector3(UnityEngine.Random.Range(-4f, 4f), 0f, UnityEngine.Random.Range(-4f, 4f));
 
         //아이들일 때 2초 대기
         while (true)
@@ -198,6 +228,8 @@ public class SkeltonAI : MonoBehaviour
 
     IEnumerator CoroutineRun()
     {
+        anim.SetBool("isRun", true);
+        
         yield break;
     }
 
@@ -211,10 +243,42 @@ public class SkeltonAI : MonoBehaviour
         yield break;
     }
 
+    IEnumerator CoroutineHide()
+    {
+        while(true)
+        {
+            yield return new WaitForSeconds(2f);
+            ChangeState(EnemyState.Idle);
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if(other.gameObject.tag == "Player")
+        {
+            isFindE = true;
+            target = other.gameObject;
+        }
+    }
+
     bool IsFindEnemy()
     {
         //타겟이 있을 때 일정거리 안에 있으면 찾았다.
+        Bounds bounds = target.GetComponentInChildren<SkinnedMeshRenderer>().bounds;
+        //eye 대상 캐릭터의 머리에 붙인 카메라
+        Plane[] planes = GeometryUtility.CalculateFrustumPlanes(eye);
+        isFindE = GeometryUtility.TestPlanesAABB(planes, bounds); //카메라 영역 안이면 찾는다
 
-        return false;
+        //적과 본인 사이에 벽이 있는지 확인
+        RaycastHit hit;
+        if(Physics.Raycast(transform.position, transform.forward, out hit, 10f,
+            1 << LayerMask.NameToLayer("Wall")))
+            //1을 wall레이어의 번호만큼 왼쪽으로 옮긴다.
+        {
+            float distTarget = Vector3.Distance(transform.position, target.transform.position);
+            if (distTarget > hit.distance) return false;
+        }
+
+        return isFindE;
     }
 }
