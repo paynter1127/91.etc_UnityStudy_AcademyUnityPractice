@@ -26,10 +26,13 @@ public enum EnemyState : int
 
 public class SkeltonAI : MonoBehaviour
 {
+    DissolveCTRL dc;//디졸브
+
     Camera eye;//에너미 시야
     public GameObject target;
     bool isFindE = false;
 
+    [SerializeField]
     EnemyState state;
     EnemyState nextState;
 
@@ -44,6 +47,16 @@ public class SkeltonAI : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+
+        //오브젝트 테그가 이모탈이 아니면 델리게이트를 등록하고 DIE 함수 호출
+        if(gameObject.tag != "Immotal")
+        {
+            //델리게이트 등록
+            UIMgr.instance.RegistAction(this);
+        }
+
+
+        dc = GetComponentInChildren<DissolveCTRL>();
 
         state = EnemyState.Idle;
         anim = GetComponent<Animator>();
@@ -60,6 +73,8 @@ public class SkeltonAI : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        
+
         //if(Input.GetKeyDown(KeyCode.LeftArrow))
         //{
         //    anim.SetBool("isWalk", true);
@@ -176,36 +191,26 @@ public class SkeltonAI : MonoBehaviour
         //스테이트가 바뀔 때 한번만 실행되는 동작
         anim.SetBool("isIdle", true);
 
-        int randState = UnityEngine.Random.Range(1, 2);
+        dc.ChangeState(DissolveCTRL.State.HIDE_OFF);
+        int randomNum = UnityEngine.Random.Range(1, 2); //렌덤 디졸브 처리
+
+        int randState = UnityEngine.Random.Range(1, 3);
         switch(randState)
         {
             case 0: nextState = EnemyState.Idle; break;
-            case 1: nextState = EnemyState.Walk; break;
+            case 1: nextState = EnemyState.Attack; break;
+            case 2: nextState = EnemyState.Hide; break;
         }
 
         //아이들일 때 2초 대기
         while (true)
         {
-            Debug.Log("A_idle");
             yield return new WaitForSeconds(2.0f);
-            Debug.Log("B_idle");
 
             ChangeState(nextState);
         }
         
-        //yield break;
-
-        //특정 시간이나 조건에 따라 반복되는 실행문
-        //while (true)
-        //{
-        //    Debug.Log("A");
-        //    yield return new WaitForSeconds(3.0f);
-        //    Debug.Log("B");
-        //    yield return new WaitForSeconds(3.0f);
-        //
-        //    yield return null;//한 프레임??
-        //}
-        //yield break;
+        
     }
 
     IEnumerator CoroutineWalk()
@@ -218,9 +223,7 @@ public class SkeltonAI : MonoBehaviour
         //아이들일 때 2초 대기
         while (true)
         {
-            Debug.Log("A_walk");
             yield return new WaitForSeconds(3.0f);
-            Debug.Log("B_walk");
 
             ChangeState(nextState);
         }
@@ -235,7 +238,13 @@ public class SkeltonAI : MonoBehaviour
 
     IEnumerator CoroutineAttack()
     {
-        yield break;
+        anim.SetBool("isAttack", true);
+
+        while (true)
+        {
+            yield return new WaitForSeconds(2f);
+            ChangeState(EnemyState.Idle);
+        }
     }
 
     IEnumerator CoroutineDeath()
@@ -245,6 +254,8 @@ public class SkeltonAI : MonoBehaviour
 
     IEnumerator CoroutineHide()
     {
+        dc.ChangeState(DissolveCTRL.State.HIDE_ON);
+
         while(true)
         {
             yield return new WaitForSeconds(2f);
@@ -280,5 +291,29 @@ public class SkeltonAI : MonoBehaviour
         }
 
         return isFindE;
+    }
+
+
+    //애니메이션의 이벤트 연결 함수
+    void OnAttack(AnimationEvent animationEvent)
+    {
+        Debug.Log("OnAttack() :" + animationEvent.intParameter);
+
+        if(animationEvent.intParameter == 1)
+        {
+            //무기 콜라이더를 켠다
+        }
+        else
+        {
+            //무기 콜라이더를 끈다
+        }
+    }
+
+    //죽는 함수
+    //참고 internal : 같은 프로젝트 파일 내에서 접근 가능하게 한다.
+    internal void Die()
+    {
+        //죽는 처리
+        Debug.Log(gameObject.name + " 가 죽었다.");
     }
 }
